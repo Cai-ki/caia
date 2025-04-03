@@ -31,12 +31,12 @@ func main() {
 	for {
 		conn.Write([]byte("hello, world!"))
 		data := make([]byte, 1024)
-		n, err := conn.Read(data)
+		_, err := conn.Read(data)
 		if err != nil {
 			fmt.Println("main: read err ", err)
 			continue
 		}
-		fmt.Printf("main: receive %d byte, data: %s\n", n, string(data[:n]))
-		<-time.After(time.Second)
+		//fmt.Printf("main: receive %d byte, data: %s\n", n, string(data[:n]))
+		<-time.After(2 * time.Second)
 	}
 }

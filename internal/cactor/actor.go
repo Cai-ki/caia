@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/internal/ctypes"
 )
 
@@ -55,9 +56,6 @@ func NewManager(name string, buffer int, parentCtx context.Context, handle ctype
 }
 
 func (r *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc, opts ...ctypes.OptionFunc) (ctypes.Actor, error) {
-	if r.closed.Load() {
-		panic("can't create child when actor running")
-	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	_, ok := r.children[name]
@@ -165,7 +163,7 @@ func (r *Manager) serve() {
 
 func (r *Manager) cleanup() {
 	r.mailbox.Close()
-	fmt.Printf("actor: %s close channel\n", r.name)
+	clog.Info(fmt.Sprintf("actor: %s close channel\n", r.name))
 }
 
 func (r *Manager) stop() {
@@ -187,12 +185,12 @@ func (r *Manager) stop() {
 func (r *Manager) handleMessage(msg ctypes.Message) {
 	defer func() { // panic终止于此处，默认不信任所有执行的handle，Manager只负责接受message，并根据构造时传入的handle进行相应处理，进行一个逻辑转发的工作。
 		if err := recover(); err != nil {
-			fmt.Printf("actor: %s panic when handle message: %v with error: %v\n", r.name, msg, err)
+			clog.Error(fmt.Sprintf("actor: %s panic when handle message: %v with error: %v", r.name, msg, err))
 		}
 	}()
 
 	if r.handle == nil {
-		fmt.Printf("actor: %s handle not found\n", r.name)
+		clog.Error(fmt.Sprintf("actor: %s handle not found", r.name))
 		return
 	}
 

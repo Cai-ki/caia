@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Cai-ki/caia/internal/cactor"
+	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/internal/cregistry"
 	"github.com/Cai-ki/caia/internal/ctypes"
 )
@@ -32,11 +33,11 @@ func init() {
 
 	config, err := LoadConfig(ConfigPath)
 	if err != nil {
-		panic(fmt.Sprintf("runtime: config load error: %s", err))
+		clog.Fatal(fmt.Sprintf("runtime: config load error: %s", err))
 	}
 	Configs[KeyConfig] = config
 
-	fmt.Println(KeyConfig, ": ", config)
+	clog.Info(KeyConfig, ": ", *config)
 }
 
 func Start() {

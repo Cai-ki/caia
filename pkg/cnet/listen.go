@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/Cai-ki/caia/internal/cactor"
+	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/internal/ctypes"
 	"github.com/Cai-ki/caia/pkg/cruntime"
 )
@@ -16,22 +17,22 @@ func ListenTCPHandle(ctx context.Context, msg ctypes.Message) {
 	netActor := ctx.Value(KeyManager).(ctypes.Actor)
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", netConfig.Ip, netConfig.Port))
 	if err != nil {
-		fmt.Println("net: resolve tcp address err: ", err)
+		clog.Error(fmt.Sprint("net: resolve tcp address error:", err))
 		return
 	}
 	listenner, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		fmt.Printf("net: listen: %s, err: %s\n", "tcp", err)
+		clog.Error(fmt.Sprintf("net: listen: %s, error: %s", "tcp", err))
 		return
 	}
 
-	fmt.Printf("net: listen at %s:%d\n", netConfig.Ip, netConfig.Port)
+	clog.Info(fmt.Sprintf("net: listen at %s:%d", netConfig.Ip, netConfig.Port))
 
 	var cid uint32 = 0
 	for {
 		conn, err := listenner.AcceptTCP()
 		if err != nil {
-			fmt.Println("net: accept err ", err)
+			clog.Error(fmt.Sprint("net: accept error", err))
 			continue
 		}
 
