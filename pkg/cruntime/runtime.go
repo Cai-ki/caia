@@ -25,7 +25,7 @@ var (
 
 func init() {
 	Factory = cfactory.NewManager("root")
-	Routine = croutine.NewManager("root", 1, context.Background(), func(ctypes.Message) {
+	Routine = croutine.NewManager("root", 1, context.Background(), func(context.Context, ctypes.Message) {
 
 	})
 	Registry = cregistry.NewManager("root")

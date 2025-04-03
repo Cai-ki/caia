@@ -187,5 +187,5 @@ func (r *Manager) handleMessage(msg ctypes.Message) {
 		return
 	}
 
-	r.handle(msg)
+	r.handle(r.ctx, msg)
 }

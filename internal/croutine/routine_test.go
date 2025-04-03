@@ -17,7 +17,7 @@ func TestManagerNormal(t *testing.T) {
 		*ctypes.NewMessage("msg", mailbox),
 		*ctypes.NewMessage("msg", mailbox),
 	}
-	r := NewManager("test", 5, context.Background(), func(msg ctypes.Message) {
+	r := NewManager("test", 5, context.Background(), func(ctx context.Context, msg ctypes.Message) {
 		msg.ReplyTo <- *ctypes.NewMessage(msg.Payload, nil)
 	})
 
@@ -50,7 +50,7 @@ func TestManagerWhenPanic(t *testing.T) {
 		*ctypes.NewMessage("msg", mailbox),
 		*ctypes.NewMessage("msg", mailbox),
 	}
-	r := NewManager("test", 10, context.Background(), func(msg ctypes.Message) {
+	r := NewManager("test", 10, context.Background(), func(ctx context.Context, msg ctypes.Message) {
 		msg.ReplyTo <- *ctypes.NewMessage(msg.Payload, nil)
 		panic("panic")
 	})
