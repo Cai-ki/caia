@@ -2,7 +2,9 @@
     "ip": "localhost",
     "port": 9000,
     "max_connections": 1000,
-    "read_timeout_sec": 30,
+    "listen_deadline_ms": 100,
+    "read_deadline_ms": 100,
+    "write_deadline_ms": 100,
     "tls": {
         "enabled": true,
         "cert_file": "server.crt",

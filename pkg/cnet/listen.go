@@ -15,9 +15,9 @@ import (
 )
 
 func ListenTCPHandle(ctx context.Context, msg ctypes.Message) {
-	netConfig := cruntime.Configs[KeyConfig].(*Config)
-	netActor := ctx.Value(KeyManager).(ctypes.Actor)
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", netConfig.Ip, netConfig.Port))
+	// config := cruntime.Configs[KeyConfig].(*Config)
+	manager := ctx.Value(KeyManager).(ctypes.Actor)
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", config.Ip, config.Port))
 	if err != nil {
 		clog.Error("net: resolve tcp address error:", err)
 		return
@@ -29,15 +29,16 @@ func ListenTCPHandle(ctx context.Context, msg ctypes.Message) {
 	}
 	defer listenner.Close()
 
-	clog.Infof("net: listening on %s:%d", netConfig.Ip, netConfig.Port)
+	clog.Infof("net: listening on %s:%d", config.Ip, config.Port)
 
+	addTime := time.Duration(config.ListenDeadlineMs) * time.Millisecond
 	var cid uint32 = 0
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			listenner.SetDeadline(time.Now().Add(1 * time.Second))
+			listenner.SetDeadline(time.Now().Add(addTime))
 			conn, err := listenner.AcceptTCP()
 			if err != nil {
 				if os.IsTimeout(err) {
@@ -47,7 +48,7 @@ func ListenTCPHandle(ctx context.Context, msg ctypes.Message) {
 				continue
 			}
 
-			connActor, err := netActor.CreateChild(strconv.Itoa(int(cid)), 10, ConnectHandle, cactor.WithValue("connect", conn), cactor.WithValue("cid", cid))
+			connActor, err := manager.CreateChild(strconv.Itoa(int(cid)), 10, ConnectHandle, cactor.WithValue("connect", conn), cactor.WithValue("cid", cid))
 			if err != nil {
 				clog.Errorf("net: failed to create connection with %s: %v", conn.RemoteAddr().String(), err)
 			}

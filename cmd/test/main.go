@@ -28,7 +28,7 @@ func main() {
 		return
 	}
 
-	t := time.After(4 * time.Second)
+	t := time.After(10 * time.Second)
 
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()

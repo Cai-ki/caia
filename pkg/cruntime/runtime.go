@@ -22,6 +22,8 @@ var (
 	}
 )
 
+var config *Config
+
 func init() {
 	RootActor = cactor.NewManager(RootActorName, 1, context.WithValue(context.Background(), KeyManager, nil), func(context.Context, ctypes.Message) {
 	})
@@ -30,10 +32,11 @@ func init() {
 	Registrys[RootActorName] = rootRegistry
 	Configs = map[string]interface{}{}
 
-	config, err := LoadConfig(ConfigPath)
+	c, err := LoadConfig(ConfigPath)
 	if err != nil {
 		clog.Fatal("runtime: config load error:", err)
 	}
+	config = c
 	Configs[KeyConfig] = config
 
 	clog.Info(KeyConfig, ": ", *config)

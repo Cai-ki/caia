@@ -10,8 +10,13 @@ type Config struct {
 	Ip             string `json:"ip"`
 	Port           int    `json:"port"`
 	MaxConnections int    `json:"max_connections"`
-	ReadTimeoutSec int    `json:"read_timeout_sec"`
-	TLS            struct {
+	// ListenTimeoutSec  int    `json:"listen_timeout_sec"`
+	// ReadTimeoutSec    int    `json:"read_timeout_sec"`
+	// WriteTimeoutSec   int    `json:"write_timeout_sec"`
+	ListenDeadlineMs int `json:"listen_deadline_ms"`
+	ReadDeadlineMs   int `json:"read_deadline_ms"`
+	WriteDeadlineMs  int `json:"write_deadline_ms"`
+	TLS              struct {
 		Enabled  bool   `json:"enabled"`
 		CertFile string `json:"cert_file"`
 		KeyFile  string `json:"key_file"`

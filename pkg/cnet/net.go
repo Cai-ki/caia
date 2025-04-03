@@ -5,11 +5,14 @@ import (
 	"github.com/Cai-ki/caia/pkg/cruntime"
 )
 
+var config *Config
+
 func init() {
-	config, err := LoadConfig(ConfigPath)
+	c, err := LoadConfig(ConfigPath)
 	if err != nil {
 		clog.Fatal("net: config load error:", err)
 	}
+	config = c
 	cruntime.Configs[KeyConfig] = config
 
 	clog.Info(KeyConfig, ": ", *config)
