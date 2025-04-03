@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/Cai-ki/caia/internal/cactor"
 	"github.com/Cai-ki/caia/internal/clog"
@@ -25,26 +27,36 @@ func ListenTCPHandle(ctx context.Context, msg ctypes.Message) {
 		clog.Errorf("net: listen: %s, error: %s", "tcp", err)
 		return
 	}
+	defer listenner.Close()
 
 	clog.Infof("net: listening on %s:%d", netConfig.Ip, netConfig.Port)
 
 	var cid uint32 = 0
 	for {
-		conn, err := listenner.AcceptTCP()
-		if err != nil {
-			clog.Error("net: accept error:", err)
-			continue
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			listenner.SetDeadline(time.Now().Add(1 * time.Second))
+			conn, err := listenner.AcceptTCP()
+			if err != nil {
+				if os.IsTimeout(err) {
+					continue
+				}
+				clog.Error("net: accept error:", err)
+				continue
+			}
+
+			connActor, err := netActor.CreateChild(strconv.Itoa(int(cid)), 10, ConnectHandle, cactor.WithValue("connect", conn), cactor.WithValue("cid", cid))
+			if err != nil {
+				clog.Errorf("net: failed to create connection with %s: %v", conn.RemoteAddr().String(), err)
+			}
+
+			clog.Infof("net: established connection with %s", conn.RemoteAddr().String())
+
+			connActor.Start()
+			connActor.SendMessage(cruntime.MsgStart)
+			cid++
 		}
-
-		connActor, err := netActor.CreateChild(strconv.Itoa(int(cid)), 10, ConnectHandle, cactor.WithValue("connect", conn), cactor.WithValue("cid", cid))
-		if err != nil {
-			clog.Errorf("net: failed to create connection with %s: %v", conn.RemoteAddr().String(), err)
-		}
-
-		clog.Infof("net: established connection with %s", conn.RemoteAddr().String())
-
-		connActor.Start()
-		connActor.SendMessage(cruntime.MsgStart)
-		cid++
 	}
 }

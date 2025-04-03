@@ -23,7 +23,7 @@ var (
 )
 
 func init() {
-	RootActor = cactor.NewManager(RootActorName, 1, context.Background(), func(context.Context, ctypes.Message) {
+	RootActor = cactor.NewManager(RootActorName, 1, context.WithValue(context.Background(), KeyManager, nil), func(context.Context, ctypes.Message) {
 	})
 	rootRegistry := cregistry.NewManager(RootActorName)
 	Registrys = map[string]ctypes.Registry{}

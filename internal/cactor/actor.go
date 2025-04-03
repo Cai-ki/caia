@@ -21,12 +21,12 @@ func WithValue(key, val interface{}) ctypes.OptionFunc {
 }
 
 type Manager struct {
-	name    string
-	mailbox ctypes.Mailbox
-	ctx     context.Context
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
-	//children    []*Manager
+	name     string
+	mailbox  ctypes.Mailbox
+	ctx      context.Context
+	cancel   context.CancelFunc
+	wg       sync.WaitGroup
+	parent   *Manager
 	children map[string]*Manager
 	mu       sync.Mutex
 	closed   atomic.Bool
@@ -44,6 +44,13 @@ func NewManager(name string, buffer int, parentCtx context.Context, handle ctype
 		cancel:   cancel,
 		children: map[string]*Manager{},
 		handle:   handle,
+	}
+
+	v := parentCtx.Value(KeyManager)
+	if v == nil {
+		m.parent = nil
+	} else {
+		m.parent = v.(*Manager)
 	}
 
 	WithValue(KeyManager, m)(m)
@@ -72,6 +79,19 @@ func (r *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc,
 	return child, nil
 }
 
+func (r *Manager) DeleteChind(name string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, ok := r.children[name]
+	if ok {
+		return ctypes.ErrKeyRepeat
+	}
+
+	delete(r.children, name)
+
+	return nil
+}
+
 func (r *Manager) GetName() string {
 	return r.name
 }
@@ -86,6 +106,12 @@ func (r *Manager) Start() {
 
 func (r *Manager) Stop() {
 	r.stop()
+	if r.parent != nil {
+		err := r.parent.DeleteChind(r.name)
+		if err != nil {
+			clog.Error("actor: fail to delete actor:", r.name)
+		}
+	}
 }
 
 func (r *Manager) SendMessage(msg ctypes.Message) error {
@@ -162,7 +188,6 @@ func (r *Manager) serve() {
 
 func (r *Manager) cleanup() {
 	r.mailbox.Close()
-	clog.Infof("actor: %s close channel", r.name)
 }
 
 func (r *Manager) stop() {
@@ -177,8 +202,9 @@ func (r *Manager) stop() {
 
 	r.cancel()
 	r.wg.Wait()
-
 	r.cleanup()
+
+	clog.Infof("actor: %s actor stop", r.name)
 }
 
 func (r *Manager) handleMessage(msg ctypes.Message) {

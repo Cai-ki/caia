@@ -28,15 +28,26 @@ func main() {
 		return
 	}
 
+	t := time.After(4 * time.Second)
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	for {
-		conn.Write([]byte("hello, world!"))
-		data := make([]byte, 1024)
-		_, err := conn.Read(data)
-		if err != nil {
-			fmt.Println("main: read err ", err)
-			continue
+		select {
+		case <-t:
+			cruntime.Stop()
+			return
+		case <-ticker.C:
+			conn.SetDeadline(time.Now().Add(1 * time.Second))
+			conn.Write([]byte("hello, world!"))
+			data := make([]byte, 1024)
+			_, err := conn.Read(data)
+			if err != nil {
+				fmt.Println("main: read err ", err)
+				continue
+			}
+			//fmt.Printf("main: receive %d byte, data: %s\n", n, string(data[:n]))
 		}
-		//fmt.Printf("main: receive %d byte, data: %s\n", n, string(data[:n]))
-		<-time.After(2 * time.Second)
 	}
 }

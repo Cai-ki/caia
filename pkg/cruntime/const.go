@@ -1,10 +1,13 @@
 package cruntime
 
+import "github.com/Cai-ki/caia/internal/cactor"
+
 const (
 	ConfigPath    = "configs/runtime.json"
 	RootActorName = "root"
 )
 
 const (
-	KeyConfig = "RuntimeConfig"
+	KeyManager = cactor.KeyManager
+	KeyConfig  = "RuntimeConfig"
 )
