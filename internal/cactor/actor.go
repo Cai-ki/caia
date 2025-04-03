@@ -82,13 +82,13 @@ func (r *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc,
 func (r *Manager) DeleteChild(name string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	_, ok := r.children[name]
-	if ok {
-		return ctypes.ErrKeyRepeat
+	child, ok := r.children[name]
+	if !ok {
+		return ctypes.ErrChildNotFound
 	}
 
+	child.Stop()
 	delete(r.children, name)
-
 	return nil
 }
 
