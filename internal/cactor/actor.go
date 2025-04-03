@@ -9,7 +9,17 @@ import (
 	"github.com/Cai-ki/caia/internal/ctypes"
 )
 
+const (
+	KeyManager = "Manager"
+)
+
 type Option func(*Manager)
+
+func WithValue(key, val interface{}) Option {
+	return func(m *Manager) {
+		m.ctx = context.WithValue(m.ctx, key, val)
+	}
+}
 
 type Manager struct {
 	name    string
@@ -36,6 +46,8 @@ func NewManager(name string, buffer int, parentCtx context.Context, handle ctype
 		children: map[string]*Manager{},
 		handle:   handle,
 	}
+
+	WithValue(KeyManager, m)(m)
 
 	for _, opt := range opts {
 		opt(m)
@@ -64,14 +76,6 @@ func (r *Manager) GetName() string {
 
 func (r *Manager) GetMailbox() ctypes.Mailbox {
 	return r.mailbox
-}
-
-func (r *Manager) SetHandle(handle ctypes.HandleFunc) error {
-	if r.handle != nil {
-		return ctypes.ErrSetRepeat
-	}
-	r.handle = handle
-	return nil
 }
 
 func (r *Manager) Start() {
