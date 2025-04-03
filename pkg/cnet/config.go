@@ -34,10 +34,10 @@ func LoadConfig(path string) (*Config, error) {
 
 func (c *Config) Validate() error {
 	if c.Port <= 0 || c.Port > 65535 {
-		return errors.New("无效端口号")
+		return errors.New("invalid port number")
 	}
 	if c.TLS.Enabled && (c.TLS.CertFile == "" || c.TLS.KeyFile == "") {
-		return errors.New("TLS 需要证书文件")
+		return errors.New("TLS requires a certificate file")
 	}
 	return nil
 }

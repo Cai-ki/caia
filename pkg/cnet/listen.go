@@ -17,26 +17,32 @@ func ListenTCPHandle(ctx context.Context, msg ctypes.Message) {
 	netActor := ctx.Value(KeyManager).(ctypes.Actor)
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", netConfig.Ip, netConfig.Port))
 	if err != nil {
-		clog.Error(fmt.Sprint("net: resolve tcp address error:", err))
+		clog.Error("net: resolve tcp address error:", err)
 		return
 	}
 	listenner, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		clog.Error(fmt.Sprintf("net: listen: %s, error: %s", "tcp", err))
+		clog.Errorf("net: listen: %s, error: %s", "tcp", err)
 		return
 	}
 
-	clog.Info(fmt.Sprintf("net: listen at %s:%d", netConfig.Ip, netConfig.Port))
+	clog.Infof("net: listening on %s:%d", netConfig.Ip, netConfig.Port)
 
 	var cid uint32 = 0
 	for {
 		conn, err := listenner.AcceptTCP()
 		if err != nil {
-			clog.Error(fmt.Sprint("net: accept error", err))
+			clog.Error("net: accept error:", err)
 			continue
 		}
 
 		connActor, err := netActor.CreateChild(strconv.Itoa(int(cid)), 10, ConnectHandle, cactor.WithValue("connect", conn), cactor.WithValue("cid", cid))
+		if err != nil {
+			clog.Errorf("net: failed to create connection with %s: %v", conn.RemoteAddr().String(), err)
+		}
+
+		clog.Infof("net: established connection with %s", conn.RemoteAddr().String())
+
 		connActor.Start()
 		connActor.SendMessage(cruntime.MsgStart)
 		cid++

@@ -16,10 +16,10 @@ func ConnectHandle(ctx context.Context, msg ctypes.Message) {
 		data := make([]byte, 1024)
 		n, err := conn.Read(data)
 		if err != nil {
-			clog.Error(fmt.Sprint("net: read err ", err))
+			clog.Error("net: read error:", err)
 			continue
 		}
 		conn.Write([]byte(fmt.Sprintf("id: %d send %d byte, data: %s\n", cid, n, string(data[:n]))))
-		clog.Info(fmt.Sprintf("id: %d send %d byte, data: %s", cid, n, string(data[:n])))
+		clog.Infof("id: %d send %d byte, data: %s", cid, n, string(data[:n]))
 	}
 }

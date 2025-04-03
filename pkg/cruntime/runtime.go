@@ -2,7 +2,6 @@ package cruntime
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Cai-ki/caia/internal/cactor"
 	"github.com/Cai-ki/caia/internal/clog"
@@ -33,7 +32,7 @@ func init() {
 
 	config, err := LoadConfig(ConfigPath)
 	if err != nil {
-		clog.Fatal(fmt.Sprintf("runtime: config load error: %s", err))
+		clog.Fatal("runtime: config load error:", err)
 	}
 	Configs[KeyConfig] = config
 

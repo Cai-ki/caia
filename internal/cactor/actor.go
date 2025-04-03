@@ -2,7 +2,6 @@ package cactor
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -163,7 +162,7 @@ func (r *Manager) serve() {
 
 func (r *Manager) cleanup() {
 	r.mailbox.Close()
-	clog.Info(fmt.Sprintf("actor: %s close channel\n", r.name))
+	clog.Infof("actor: %s close channel", r.name)
 }
 
 func (r *Manager) stop() {
@@ -185,12 +184,12 @@ func (r *Manager) stop() {
 func (r *Manager) handleMessage(msg ctypes.Message) {
 	defer func() { // panic终止于此处，默认不信任所有执行的handle，Manager只负责接受message，并根据构造时传入的handle进行相应处理，进行一个逻辑转发的工作。
 		if err := recover(); err != nil {
-			clog.Error(fmt.Sprintf("actor: %s panic when handle message: %v with error: %v", r.name, msg, err))
+			clog.Errorf("actor: %s panic when handle message: %v with error: %v", r.name, msg, err)
 		}
 	}()
 
 	if r.handle == nil {
-		clog.Error(fmt.Sprintf("actor: %s handle not found", r.name))
+		clog.Errorf("actor: %s handle not found", r.name)
 		return
 	}
 

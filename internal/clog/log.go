@@ -108,7 +108,6 @@ func (l *Logger) log(level LogLevel, msg string) {
 	}
 
 	builder.WriteString(msg)
-	builder.WriteString("\n")
 
 	fmt.Fprint(l.out, builder.String())
 
@@ -118,34 +117,59 @@ func (l *Logger) log(level LogLevel, msg string) {
 }
 
 func (l *Logger) Debug(v ...interface{}) {
-	l.log(DEBUG, fmt.Sprint(v...))
+	l.log(DEBUG, fmt.Sprintln(v...))
 }
 
 func (l *Logger) Info(v ...interface{}) {
-	l.log(INFO, fmt.Sprint(v...))
+	l.log(INFO, fmt.Sprintln(v...))
 }
 
 func (l *Logger) Warn(v ...interface{}) {
-	l.log(WARN, fmt.Sprint(v...))
+	l.log(WARN, fmt.Sprintln(v...))
 }
 
 func (l *Logger) Error(v ...interface{}) {
-	l.log(ERROR, fmt.Sprint(v...))
+	l.log(ERROR, fmt.Sprintln(v...))
 }
 
 func (l *Logger) Fatal(v ...interface{}) {
-	l.log(FATAL, fmt.Sprint(v...))
+	l.log(FATAL, fmt.Sprintln(v...))
 }
 
-func SetLevel(level LogLevel)     { std.SetLevel(level) }
-func SetOutput(w io.Writer)       { std.SetOutput(w) }
-func SetTimeFormat(format string) { std.SetTimeFormat(format) }
-func ShowCaller(show bool)        { std.ShowCaller(show) }
-func Debug(v ...interface{})      { std.Debug(v...) }
-func Info(v ...interface{})       { std.Info(v...) }
-func Warn(v ...interface{})       { std.Warn(v...) }
-func Error(v ...interface{})      { std.Error(v...) }
-func Fatal(v ...interface{})      { std.Fatal(v...) }
+func (l *Logger) Debugf(format string, v ...interface{}) {
+	l.log(DEBUG, fmt.Sprintf(format, v...)+"\n")
+}
+
+func (l *Logger) Infof(format string, v ...interface{}) {
+	l.log(INFO, fmt.Sprintf(format, v...)+"\n")
+}
+
+func (l *Logger) Warnf(format string, v ...interface{}) {
+	l.log(WARN, fmt.Sprintf(format, v...)+"\n")
+}
+
+func (l *Logger) Errorf(format string, v ...interface{}) {
+	l.log(ERROR, fmt.Sprintf(format, v...)+"\n")
+}
+
+func (l *Logger) Fatalf(format string, v ...interface{}) {
+	l.log(FATAL, fmt.Sprintf(format, v...)+"\n")
+}
+
+func SetLevel(level LogLevel)                { std.SetLevel(level) }
+func SetOutput(w io.Writer)                  { std.SetOutput(w) }
+func SetTimeFormat(format string)            { std.SetTimeFormat(format) }
+func ShowCaller(show bool)                   { std.ShowCaller(show) }
+func Debug(v ...interface{})                 { std.Debug(v...) }
+func Info(v ...interface{})                  { std.Info(v...) }
+func Warn(v ...interface{})                  { std.Warn(v...) }
+func Error(v ...interface{})                 { std.Error(v...) }
+func Fatal(v ...interface{})                 { std.Fatal(v...) }
+func Debugf(format string, v ...interface{}) { std.Debugf(format, v...) }
+func Infof(format string, v ...interface{})  { std.Infof(format, v...) }
+func Warnf(format string, v ...interface{})  { std.Warnf(format, v...) }
+func Errorf(format string, v ...interface{}) { std.Errorf(format, v...) }
+func Fatalf(format string, v ...interface{}) { std.Fatalf(format, v...) }
 
 func NewFileWriter(filename string) (io.Writer, error) {
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)

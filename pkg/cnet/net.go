@@ -1,8 +1,6 @@
 package cnet
 
 import (
-	"fmt"
-
 	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/pkg/cruntime"
 )
@@ -10,7 +8,7 @@ import (
 func init() {
 	config, err := LoadConfig(ConfigPath)
 	if err != nil {
-		clog.Fatal(fmt.Sprintf("net: config load error: %s", err))
+		clog.Fatalf("net: config load error:", err)
 	}
 	cruntime.Configs[KeyConfig] = config
 
