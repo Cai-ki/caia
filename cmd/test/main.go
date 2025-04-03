@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/Cai-ki/caia/pkg/cnet"
 	_ "github.com/Cai-ki/caia/pkg/cnet"
 	"github.com/Cai-ki/caia/pkg/cruntime"
 )
@@ -14,7 +15,8 @@ func main() {
 
 	<-time.After(time.Second)
 
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", "", 60000))
+	netConfig := cruntime.Configs["NetConfig"].(*cnet.Config)
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", netConfig.Ip, netConfig.Port))
 	if err != nil {
 		fmt.Println("main: resolve tcp address err: ", err)
 		return

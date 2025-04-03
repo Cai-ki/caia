@@ -1,0 +1,11 @@
+{
+    "ip": "localhost",
+    "port": 9000,
+    "max_connections": 1000,
+    "read_timeout_sec": 30,
+    "tls": {
+        "enabled": true,
+        "cert_file": "server.crt",
+        "key_file": "server.key"
+    }
+}

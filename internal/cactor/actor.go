@@ -13,10 +13,9 @@ const (
 	KeyManager = "Manager"
 )
 
-type Option func(*Manager)
-
-func WithValue(key, val interface{}) Option {
-	return func(m *Manager) {
+func WithValue(key, val interface{}) ctypes.OptionFunc {
+	return func(i interface{}) {
+		m := i.(*Manager)
 		m.ctx = context.WithValue(m.ctx, key, val)
 	}
 }
@@ -36,7 +35,7 @@ type Manager struct {
 
 var _ ctypes.Actor = (*Manager)(nil)
 
-func NewManager(name string, buffer int, parentCtx context.Context, handle ctypes.HandleFunc, opts ...Option) *Manager {
+func NewManager(name string, buffer int, parentCtx context.Context, handle ctypes.HandleFunc, opts ...ctypes.OptionFunc) *Manager {
 	ctx, cancel := context.WithCancel(parentCtx)
 	m := &Manager{
 		name:     name,
@@ -55,7 +54,7 @@ func NewManager(name string, buffer int, parentCtx context.Context, handle ctype
 	return m
 }
 
-func (r *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc) (ctypes.Actor, error) {
+func (r *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc, opts ...ctypes.OptionFunc) (ctypes.Actor, error) {
 	if r.closed.Load() {
 		panic("can't create child when actor running")
 	}
@@ -67,6 +66,12 @@ func (r *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc)
 	}
 	child := NewManager(name, buffer, r.ctx, handle)
 	r.children[name] = child
+
+	WithValue(KeyManager, child)(child)
+
+	for _, opt := range opts {
+		opt(child)
+	}
 	return child, nil
 }
 

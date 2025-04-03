@@ -2,6 +2,7 @@ package cruntime
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Cai-ki/caia/internal/cactor"
 	"github.com/Cai-ki/caia/internal/cregistry"
@@ -9,9 +10,9 @@ import (
 )
 
 var (
-	RootActor    ctypes.Actor
-	RootRegistry ctypes.Registry
-	Config       map[string]interface{}
+	RootActor ctypes.Actor
+	Registrys map[string]ctypes.Registry
+	Configs   map[string]interface{}
 )
 
 var (
@@ -22,11 +23,20 @@ var (
 )
 
 func init() {
-	RootActor = cactor.NewManager("root", 1, context.Background(), func(context.Context, ctypes.Message) {
-
+	RootActor = cactor.NewManager(RootActorName, 1, context.Background(), func(context.Context, ctypes.Message) {
 	})
-	RootRegistry = cregistry.NewManager("root")
-	Config = map[string]interface{}{}
+	rootRegistry := cregistry.NewManager(RootActorName)
+	Registrys = map[string]ctypes.Registry{}
+	Registrys[RootActorName] = rootRegistry
+	Configs = map[string]interface{}{}
+
+	config, err := LoadConfig(ConfigPath)
+	if err != nil {
+		panic(fmt.Sprintf("runtime: config load error: %s", err))
+	}
+	Configs[KeyConfig] = config
+
+	fmt.Println(KeyConfig, ": ", config)
 }
 
 func Start() {
