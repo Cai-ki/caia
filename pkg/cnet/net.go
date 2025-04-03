@@ -11,11 +11,11 @@ import (
 )
 
 func init() {
-	netRoutine, err := cruntime.Routine.CreateChild("net", 10, nil)
+	netActor, err := cruntime.Root.CreateChild("net", 10, nil)
 	if err != nil {
 		panic("net: init fail")
 	} else {
-		netRoutine.SetHandle(func(context.Context, ctypes.Message) {
+		netActor.SetHandle(func(context.Context, ctypes.Message) {
 			addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", "", 60000))
 			if err != nil {
 				fmt.Println("net: resolve tcp address err: ", err)
@@ -34,7 +34,7 @@ func init() {
 					continue
 				}
 
-				connRoutine, err := netRoutine.CreateChild(strconv.Itoa(int(cid)), 10, func(ctx context.Context, msg ctypes.Message) {
+				connRoot, err := netActor.CreateChild(strconv.Itoa(int(cid)), 10, func(ctx context.Context, msg ctypes.Message) {
 					for {
 						data := make([]byte, 1024)
 						n, err := conn.Read(data)
@@ -45,8 +45,8 @@ func init() {
 						conn.Write([]byte(fmt.Sprintf("id: %d send %d byte, data: %s\n", cid, n, string(data[:n]))))
 					}
 				})
-				connRoutine.Start()
-				connRoutine.SendMessage(cruntime.MsgStart)
+				connRoot.Start()
+				connRoot.SendMessage(cruntime.MsgStart)
 				cid++
 			}
 		})

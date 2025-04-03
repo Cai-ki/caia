@@ -3,15 +3,13 @@ package cruntime
 import (
 	"context"
 
-	"github.com/Cai-ki/caia/internal/cfactory"
+	"github.com/Cai-ki/caia/internal/cactor"
 	"github.com/Cai-ki/caia/internal/cregistry"
-	"github.com/Cai-ki/caia/internal/croutine"
 	"github.com/Cai-ki/caia/internal/ctypes"
 )
 
 var (
-	Factory  ctypes.Factory
-	Routine  ctypes.Routine
+	Root     ctypes.Actor
 	Registry ctypes.Registry
 	Config   map[string]interface{}
 )
@@ -24,8 +22,7 @@ var (
 )
 
 func init() {
-	Factory = cfactory.NewManager("root")
-	Routine = croutine.NewManager("root", 1, context.Background(), func(context.Context, ctypes.Message) {
+	Root = cactor.NewManager("root", 1, context.Background(), func(context.Context, ctypes.Message) {
 
 	})
 	Registry = cregistry.NewManager("root")
@@ -33,10 +30,10 @@ func init() {
 }
 
 func Start() {
-	Routine.Start()
-	Routine.SendMessageToChildren(MsgStart)
+	Root.Start()
+	Root.SendMessageToChildren(MsgStart)
 }
 
 func Stop() {
-	Routine.Stop()
+	Root.Stop()
 }

@@ -9,8 +9,8 @@ var (
 	ErrKeyRepeat       = errors.New("key repeat")
 	ErrSetRepeat       = errors.New("Set repeat")
 
-	ErrRoutineClosed = errors.New("routine: operation on closed routine")
-	ErrChannelFull   = errors.New("routine: channel buffer full")
+	ErrActorClosed = errors.New("actor: operation on closed actor")
+	ErrChannelFull = errors.New("actor: channel buffer full")
 
 	ErrKeyNotFound = errors.New("storage: key not found")
 	ErrInvalidType = errors.New("storage: invalid value type")

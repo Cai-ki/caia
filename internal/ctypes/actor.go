@@ -1,7 +1,7 @@
 package ctypes
 
-type Routine interface {
-	CreateChild(name string, buffer int, handle HandleFunc) (Routine, error)
+type Actor interface {
+	CreateChild(name string, buffer int, handle HandleFunc) (Actor, error)
 	GetName() string
 	GetMailbox() Mailbox
 	SetHandle(handle HandleFunc) error

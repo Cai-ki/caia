@@ -1,4 +1,4 @@
-package croutine
+package cactor
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type Manager struct {
 	handle   ctypes.HandleFunc
 }
 
-var _ ctypes.Routine = (*Manager)(nil)
+var _ ctypes.Actor = (*Manager)(nil)
 
 func NewManager(name string, buffer int, parentCtx context.Context, handle ctypes.HandleFunc, opts ...Option) *Manager {
 	ctx, cancel := context.WithCancel(parentCtx)
@@ -43,9 +43,9 @@ func NewManager(name string, buffer int, parentCtx context.Context, handle ctype
 	return m
 }
 
-func (r *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc) (ctypes.Routine, error) {
+func (r *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc) (ctypes.Actor, error) {
 	if r.closed.Load() {
-		panic("can't create child when routine running")
+		panic("can't create child when actor running")
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -87,7 +87,7 @@ func (r *Manager) SendMessage(msg ctypes.Message) error {
 	case r.mailbox.Chan() <- msg:
 		return nil
 	case <-r.ctx.Done():
-		return ctypes.ErrRoutineClosed
+		return ctypes.ErrActorClosed
 	}
 }
 
@@ -96,7 +96,7 @@ func (r *Manager) SendMessageAsync(msg ctypes.Message) error {
 	case r.mailbox.Chan() <- msg:
 		return nil
 	case <-r.ctx.Done():
-		return ctypes.ErrRoutineClosed
+		return ctypes.ErrActorClosed
 	default:
 		return ctypes.ErrChannelFull
 	}
@@ -156,7 +156,7 @@ func (r *Manager) serve() {
 
 func (r *Manager) cleanup() {
 	r.mailbox.Close()
-	fmt.Printf("routine: %s close channel\n", r.name)
+	fmt.Printf("actor: %s close channel\n", r.name)
 }
 
 func (r *Manager) stop() {
@@ -178,12 +178,12 @@ func (r *Manager) stop() {
 func (r *Manager) handleMessage(msg ctypes.Message) {
 	defer func() { // panic终止于此处，默认不信任所有执行的handle，Manager只负责接受message，并根据构造时传入的handle进行相应处理，进行一个逻辑转发的工作。
 		if err := recover(); err != nil {
-			fmt.Printf("routine: %s panic when handle message: %v with error: %v\n", r.name, msg, err)
+			fmt.Printf("actor: %s panic when handle message: %v with error: %v\n", r.name, msg, err)
 		}
 	}()
 
 	if r.handle == nil {
-		fmt.Printf("routine: %s handle not found\n", r.name)
+		fmt.Printf("actor: %s handle not found\n", r.name)
 		return
 	}
 
