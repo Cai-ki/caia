@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	netActor, err := cruntime.Root.CreateChild("net", 10, nil)
+	netActor, err := cruntime.RootActor.CreateChild("net", 10, nil)
 	if err != nil {
 		panic("net: init fail")
 	} else {

@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	Root     ctypes.Actor
-	Registry ctypes.Registry
-	Config   map[string]interface{}
+	RootActor    ctypes.Actor
+	RootRegistry ctypes.Registry
+	Config       map[string]interface{}
 )
 
 var (
@@ -22,18 +22,18 @@ var (
 )
 
 func init() {
-	Root = cactor.NewManager("root", 1, context.Background(), func(context.Context, ctypes.Message) {
+	RootActor = cactor.NewManager("root", 1, context.Background(), func(context.Context, ctypes.Message) {
 
 	})
-	Registry = cregistry.NewManager("root")
+	RootRegistry = cregistry.NewManager("root")
 	Config = map[string]interface{}{}
 }
 
 func Start() {
-	Root.Start()
-	Root.SendMessageToChildren(MsgStart)
+	RootActor.Start()
+	RootActor.SendMessageToChildren(MsgStart)
 }
 
 func Stop() {
-	Root.Stop()
+	RootActor.Stop()
 }
