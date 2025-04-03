@@ -8,7 +8,7 @@ import (
 func init() {
 	config, err := LoadConfig(ConfigPath)
 	if err != nil {
-		clog.Fatalf("net: config load error:", err)
+		clog.Fatal("net: config load error:", err)
 	}
 	cruntime.Configs[KeyConfig] = config
 
