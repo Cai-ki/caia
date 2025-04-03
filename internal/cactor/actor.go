@@ -79,7 +79,7 @@ func (r *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc,
 	return child, nil
 }
 
-func (r *Manager) DeleteChind(name string) error {
+func (r *Manager) DeleteChild(name string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	_, ok := r.children[name]
@@ -107,7 +107,7 @@ func (r *Manager) Start() {
 func (r *Manager) Stop() {
 	r.stop()
 	if r.parent != nil {
-		err := r.parent.DeleteChind(r.name)
+		err := r.parent.DeleteChild(r.name)
 		if err != nil {
 			clog.Error("actor: fail to delete actor:", r.name)
 		}

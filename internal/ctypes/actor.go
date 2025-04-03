@@ -2,6 +2,7 @@ package ctypes
 
 type Actor interface {
 	CreateChild(name string, buffer int, handle HandleFunc, opts ...OptionFunc) (Actor, error)
+	DeleteChild(name string) error
 	GetName() string
 	GetMailbox() Mailbox
 	Start()
