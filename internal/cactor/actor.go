@@ -10,10 +10,6 @@ import (
 	"github.com/panjf2000/ants/v2"
 )
 
-const (
-	KeyManager = "Manager"
-)
-
 func WithValue(key, val interface{}) ctypes.OptionFunc {
 	return func(i interface{}) {
 		m := i.(*Manager)
@@ -23,12 +19,11 @@ func WithValue(key, val interface{}) ctypes.OptionFunc {
 
 type Manager struct {
 	name     string
-	registry ctypes.Registry
 	mailbox  ctypes.Mailbox
 	ctx      context.Context
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
-	parent   *Manager
+	parent   ctypes.Actor
 	children map[string]*Manager
 	mu       sync.Mutex
 	closed   atomic.Bool
@@ -37,145 +32,138 @@ type Manager struct {
 
 var _ ctypes.Actor = (*Manager)(nil)
 
-func NewManager(name string, buffer int, parentCtx context.Context, handle ctypes.HandleFunc, opts ...ctypes.OptionFunc) *Manager {
-	ctx, cancel := context.WithCancel(parentCtx)
+func NewManager(name string, buffer int, parent ctypes.Actor, handle ctypes.HandleFunc, opts ...ctypes.OptionFunc) *Manager {
+	ctx, cancel := context.WithCancel(context.Background())
+	if parent != nil {
+		ctx, cancel = context.WithCancel(parent.GetContext())
+	}
 	m := &Manager{
 		name:     name,
 		mailbox:  *ctypes.NewMailbox(buffer),
 		ctx:      ctx,
 		cancel:   cancel,
+		parent:   parent,
 		children: map[string]*Manager{},
 		handle:   handle,
 	}
-	v := parentCtx.Value(KeyManager)
-	if v == nil {
-		m.parent = nil
-	} else {
-		m.parent = v.(*Manager)
-	}
-	WithValue(KeyManager, m)(m)
+
 	for _, opt := range opts {
 		opt(m)
 	}
 	return m
 }
 
-func (r *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc, opts ...ctypes.OptionFunc) (ctypes.Actor, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	_, ok := r.children[name]
+func (m *Manager) CreateChild(name string, buffer int, handle ctypes.HandleFunc, opts ...ctypes.OptionFunc) (ctypes.Actor, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	_, ok := m.children[name]
 	if ok {
 		return nil, ctypes.ErrKeyRepeat
 	}
-	child := NewManager(name, buffer, r.ctx, handle)
-	r.children[name] = child
+	child := NewManager(name, buffer, m, handle, opts...)
+	m.children[name] = child
 
-	WithValue(KeyManager, child)(child)
-
-	for _, opt := range opts {
-		opt(child)
-	}
 	return child, nil
 }
 
-func (r *Manager) DeleteChild(name string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	child, ok := r.children[name]
+func (m *Manager) DeleteChild(name string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	child, ok := m.children[name]
 	if !ok {
 		return ctypes.ErrChildNotFound
 	}
 
 	child.Stop()
-	delete(r.children, name)
+	delete(m.children, name)
 	return nil
 }
 
-func (r *Manager) GetName() string {
-	return r.name
+func (m *Manager) GetName() string {
+	return m.name
 }
 
-func (r *Manager) GetMailbox() ctypes.Mailbox {
-	return r.mailbox
+func (m *Manager) GetMailbox() ctypes.Mailbox {
+	return m.mailbox
 }
 
-func (r *Manager) Start() {
-	r.start()
+func (m *Manager) GetContext() context.Context {
+	return m.ctx
 }
 
-func (r *Manager) Stop() {
-	r.stop()
-	if r.parent != nil {
-		err := r.parent.DeleteChild(r.name)
+func (m *Manager) Start() {
+	m.wg.Add(1)
+	m.serve() //TODO 这里可能有协程启动时不符合预期父协程先，子协程后的顺序。建议之后压测一下。
+
+	for _, child := range m.children {
+		child.Start()
+	}
+}
+
+func (m *Manager) Stop() {
+	m.stop()
+	if m.parent != nil {
+		err := m.parent.DeleteChild(m.name)
 		if err != nil {
-			clog.Error("actor: fail to delete actor:", r.name)
+			clog.Error("actor: fail to delete actor:", m.name)
 		}
 	}
 }
 
-func (r *Manager) SendMessage(msg ctypes.Message) error {
+func (m *Manager) SendMessage(msg ctypes.Message) error {
 	select {
-	case r.mailbox.Chan() <- msg:
+	case m.mailbox.Chan() <- msg:
 		return nil
-	case <-r.ctx.Done():
+	case <-m.ctx.Done():
 		return ctypes.ErrActorClosed
 	}
 }
 
-func (r *Manager) SendMessageAsync(msg ctypes.Message) error {
+func (m *Manager) SendMessageAsync(msg ctypes.Message) error {
 	select {
-	case r.mailbox.Chan() <- msg:
+	case m.mailbox.Chan() <- msg:
 		return nil
-	case <-r.ctx.Done():
+	case <-m.ctx.Done():
 		return ctypes.ErrActorClosed
 	default:
 		return ctypes.ErrChannelFull
 	}
 }
 
-func (r *Manager) SendMessageToChildren(msg ctypes.Message) {
-	for _, child := range r.children {
+func (m *Manager) SendMessageToChildren(msg ctypes.Message) {
+	for _, child := range m.children {
 		if child != nil {
 			child.SendMessage(msg)
 		}
 	}
 }
 
-func (r *Manager) SendMessageAsyncToChildren(msg ctypes.Message) {
-	for _, child := range r.children {
+func (m *Manager) SendMessageAsyncToChildren(msg ctypes.Message) {
+	for _, child := range m.children {
 		if child != nil {
 			child.SendMessageAsync(msg)
 		}
 	}
 }
 
-func (r *Manager) start() {
-	r.wg.Add(1)
-	r.serve() //TODO 这里可能有协程启动时不符合预期父协程先，子协程后的顺序。建议之后压测一下。
-
-	for _, child := range r.children {
-		child.start()
-	}
-}
-
-func (r *Manager) serve() {
+func (m *Manager) serve() {
 	go func() {
-		defer r.stop()
-		defer r.wg.Done()
+		defer m.stop()
+		defer m.wg.Done()
 
 		for {
 			select {
-			case msg := <-r.mailbox.Chan():
+			case msg := <-m.mailbox.Chan():
 				ants.Submit(func() {
-					r.handleMessage(msg)
+					m.handleMessage(msg)
 				})
-			case <-r.ctx.Done():
-				if r.closed.Load() { // 正常退出流程，保证子协程正常退出后父协程退出。
+			case <-m.ctx.Done():
+				if m.closed.Load() { // 正常退出流程，保证子协程正常退出后父协程退出。
 					for {
 						select {
-						case msg := <-r.mailbox.Chan():
+						case msg := <-m.mailbox.Chan():
 							ants.Submit(func() {
-								r.handleMessage(msg)
+								m.handleMessage(msg)
 							})
 						default:
 							return
@@ -189,38 +177,38 @@ func (r *Manager) serve() {
 	}()
 }
 
-func (r *Manager) cleanup() {
-	r.mailbox.Close()
+func (m *Manager) cleanup() {
+	m.mailbox.Close()
 }
 
-func (r *Manager) stop() {
-	if r.closed.Load() {
+func (m *Manager) stop() {
+	if m.closed.Load() {
 		return
 	}
-	r.closed.Store(true)
+	m.closed.Store(true)
 
-	for _, child := range r.children {
+	for _, child := range m.children {
 		child.stop()
 	}
 
-	r.cancel()
-	r.wg.Wait()
-	r.cleanup()
+	m.cancel()
+	m.wg.Wait()
+	m.cleanup()
 
-	clog.Infof("actor: %s actor stop", r.name)
+	clog.Infof("actor: %s actor stop", m.name)
 }
 
-func (r *Manager) handleMessage(msg ctypes.Message) {
+func (m *Manager) handleMessage(msg ctypes.Message) {
 	defer func() { // panic终止于此处，默认不信任所有执行的handle，Manager只负责接受message，并根据构造时传入的handle进行相应处理，进行一个逻辑转发的工作。
 		if err := recover(); err != nil {
-			clog.Errorf("actor: %s panic when handle message: %v with error: %v", r.name, msg, err)
+			clog.Errorf("actor: %s panic when handle message: %v with error: %v", m.name, msg, err)
 		}
 	}()
 
-	if r.handle == nil {
-		clog.Errorf("actor: %s handle not found", r.name)
+	if m.handle == nil {
+		clog.Errorf("actor: %s handle not found", m.name)
 		return
 	}
 
-	r.handle(r.ctx, msg)
+	m.handle(m, msg)
 }

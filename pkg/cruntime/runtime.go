@@ -1,8 +1,6 @@
 package cruntime
 
 import (
-	"context"
-
 	"github.com/Cai-ki/caia/internal/cactor"
 	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/internal/cregistry"
@@ -25,8 +23,7 @@ var (
 var config *Config
 
 func init() {
-	RootActor = cactor.NewManager(RootActorName, 1, context.WithValue(context.Background(), KeyManager, nil), func(context.Context, ctypes.Message) {
-	})
+	RootActor = cactor.NewManager(RootActorName, 1, nil, func(ctypes.Actor, ctypes.Message) {})
 	rootRegistry := cregistry.NewManager(RootActorName)
 	Registrys = map[string]ctypes.Registry{}
 	Registrys[RootActorName] = rootRegistry

@@ -1,7 +1,6 @@
 package cnet
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"os"
@@ -14,9 +13,9 @@ import (
 	"github.com/Cai-ki/caia/pkg/cruntime"
 )
 
-func ListenTCPHandle(ctx context.Context, msg ctypes.Message) {
+func ListenTCPHandle(actor ctypes.Actor, msg ctypes.Message) {
 	// config := cruntime.Configs[KeyConfig].(*Config)
-	manager := ctx.Value(KeyManager).(ctypes.Actor)
+	ctx := actor.GetContext()
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", config.Ip, config.Port))
 	if err != nil {
 		clog.Error("net: resolve tcp address error:", err)
@@ -48,7 +47,7 @@ func ListenTCPHandle(ctx context.Context, msg ctypes.Message) {
 				continue
 			}
 
-			connActor, err := manager.CreateChild(strconv.Itoa(int(cid)), 10, ConnectHandle, cactor.WithValue("connect", conn), cactor.WithValue("cid", cid))
+			connActor, err := actor.CreateChild(strconv.Itoa(int(cid)), 10, ConnectHandleFactory(conn), cactor.WithValue("connect", conn), cactor.WithValue("cid", cid))
 			if err != nil {
 				clog.Errorf("net: failed to create connection with %s: %v", conn.RemoteAddr().String(), err)
 			}

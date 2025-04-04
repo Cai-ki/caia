@@ -1,7 +1,6 @@
 package cnet
 
 import (
-	"context"
 	"net"
 	"os"
 	"strconv"
@@ -13,39 +12,42 @@ import (
 	"github.com/Cai-ki/caia/pkg/cruntime"
 )
 
-func ConnectHandle(ctx context.Context, msg ctypes.Message) {
-	// config := cruntime.Configs[KeyConfig].(*Config)
-	conn := ctx.Value(KeyConnect).(*net.TCPConn)
-	defer conn.Close()
+func ConnectHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 
-	cid := ctx.Value(KeyCid).(uint32)
-	manager := ctx.Value(KeyManager).(ctypes.Actor)
-	writer, err := manager.CreateChild(strconv.Itoa(int(cid))+": writer", 10, WriteHandleFactory(ctx))
-	if err != nil {
-		clog.Errorf("net: %s create writer fail", manager.GetName())
-		manager.Stop()
-		return
+	return func(actor ctypes.Actor, msg ctypes.Message) {
+		// config := cruntime.Configs[KeyConfig].(*Config)
+		ctx := actor.GetContext()
+		defer conn.Close()
+
+		cid := ctx.Value(KeyCid).(uint32)
+		writer, err := actor.CreateChild(strconv.Itoa(int(cid))+": writer", 10, WriteHandleFactory(conn))
+		if err != nil {
+			clog.Errorf("net: %s create writer fail", actor.GetName())
+			actor.Stop()
+			return
+		}
+		writer.Start()
+
+		reader, err := actor.CreateChild(strconv.Itoa(int(cid))+": reader", 10, ReadHandleFactory(conn), cactor.WithValue("writer", writer))
+		if err != nil {
+			clog.Errorf("net: %s create reader fail", actor.GetName())
+			actor.Stop()
+			return
+		}
+		reader.Start()
+		reader.SendMessage(cruntime.MsgStart)
+
+		<-ctx.Done() //TODO connect actor 除了启动子actor外，还有负责各种msg的处理
 	}
-	writer.Start()
-
-	reader, err := manager.CreateChild(strconv.Itoa(int(cid))+": reader", 10, ReadHandleFactory(ctx), cactor.WithValue("sandbox", writer.GetMailbox()))
-	if err != nil {
-		clog.Errorf("net: %s create reader fail", manager.GetName())
-		manager.Stop()
-		return
-	}
-	reader.Start()
-	reader.SendMessage(cruntime.MsgStart)
-
-	<-ctx.Done()
 }
 
-func ReadHandleFactory(ctx context.Context) ctypes.HandleFunc {
+func ReadHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 	// config := cruntime.Configs[KeyConfig].(*Config)
-	conn := ctx.Value(KeyConnect).(*net.TCPConn)
 	addTime := time.Duration(config.ReadDeadlineMs) * time.Millisecond
-	return func(ctx context.Context, msg ctypes.Message) {
-		sandbox := ctx.Value("sandbox").(ctypes.Mailbox)
+	return func(actor ctypes.Actor, msg ctypes.Message) {
+		ctx := actor.GetContext()
+		writer := ctx.Value("writer").(ctypes.Actor)
+		sandbox := writer.GetMailbox()
 		for {
 			select {
 			case <-ctx.Done():
@@ -69,12 +71,11 @@ func ReadHandleFactory(ctx context.Context) ctypes.HandleFunc {
 	}
 }
 
-func WriteHandleFactory(ctx context.Context) ctypes.HandleFunc {
+func WriteHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 	// config := cruntime.Configs[KeyConfig].(*Config)
 	addTime := time.Duration(config.WriteDeadlineMs) * time.Millisecond
-	conn := ctx.Value(KeyConnect).(*net.TCPConn)
-
-	return func(ctx context.Context, msg ctypes.Message) {
+	return func(actor ctypes.Actor, msg ctypes.Message) {
+		ctx := actor.GetContext()
 		data := msg.Payload.(ctypes.Result).Data.([]byte)
 		for len(data) > 0 {
 			select {
