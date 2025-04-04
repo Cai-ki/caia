@@ -9,12 +9,12 @@ var (
 	ErrKeyRepeat       = errors.New("key repeat")
 	ErrSetRepeat       = errors.New("set repeat")
 
-	ErrActorClosed   = errors.New("actor: operation on closed actor")
-	ErrChannelFull   = errors.New("actor: channel buffer full")
-	ErrChildNotFound = errors.New("actor: child not found")
+	ErrActorClosed   = errors.New("operation on closed actor")
+	ErrChannelFull   = errors.New("channel buffer full")
+	ErrChildNotFound = errors.New("child not found")
 
-	ErrKeyNotFound = errors.New("storage: key not found")
-	ErrInvalidType = errors.New("storage: invalid value type")
+	ErrKeyNotFound = errors.New("key not found")
+	ErrInvalidType = errors.New("invalid value type")
 
-	ErrHandlerTimeout = errors.New("handler: execution timed out")
+	ErrHandlerTimeout = errors.New("execution timed out")
 )

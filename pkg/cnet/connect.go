@@ -9,6 +9,7 @@ import (
 	"github.com/Cai-ki/caia/internal/cactor"
 	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/internal/ctypes"
+	"github.com/Cai-ki/caia/pkg/cprotocol"
 	"github.com/Cai-ki/caia/pkg/cruntime"
 )
 
@@ -19,8 +20,12 @@ func ConnectHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 		ctx := actor.GetContext()
 		defer conn.Close()
 
+		codec := cprotocol.NewCodec(&cprotocol.TLVHandler{}, func() interface{} {
+			return &cprotocol.TLVPacket{Value: make([]byte, 0, 128)}
+		})
+
 		cid := ctx.Value(KeyCid).(uint32)
-		writer, err := actor.CreateChild(strconv.Itoa(int(cid))+": writer", 10, WriteHandleFactory(conn))
+		writer, err := actor.CreateChild(strconv.Itoa(int(cid))+": writer", 10, WriteHandleFactory(conn, codec))
 		if err != nil {
 			clog.Errorf("net: %s create writer fail", actor.GetName())
 			actor.Stop()
@@ -28,7 +33,7 @@ func ConnectHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 		}
 		writer.Start()
 
-		reader, err := actor.CreateChild(strconv.Itoa(int(cid))+": reader", 10, ReadHandleFactory(conn), cactor.WithValue("writer", writer))
+		reader, err := actor.CreateChild(strconv.Itoa(int(cid))+": reader", 10, ReadHandleFactory(conn, codec), cactor.WithValue("writer", writer))
 		if err != nil {
 			clog.Errorf("net: %s create reader fail", actor.GetName())
 			actor.Stop()
@@ -41,7 +46,7 @@ func ConnectHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 	}
 }
 
-func ReadHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
+func ReadHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.HandleFunc {
 	// config := cruntime.Configs[KeyConfig].(*Config)
 	addTime := time.Duration(config.ReadDeadlineMs) * time.Millisecond
 	return func(actor ctypes.Actor, msg ctypes.Message) {
@@ -63,20 +68,34 @@ func ReadHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 					clog.Error("net: read error:", err)
 					return
 				}
-
-				sandbox.SendResult(data[:n], nil)
-				clog.Info("read", n, "bytes data:", string(data[:n]))
+				iface, _, err := codec.Decode(data[:n])
+				pkt := iface.(*cprotocol.TLVPacket)
+				if err != nil {
+					clog.Error(err)
+					continue
+				}
+				sandbox.SendResult(pkt, nil)
+				clog.Info("read", n, "bytes data:", string(pkt.Value))
 			}
 		}
 	}
 }
 
-func WriteHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
+func WriteHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.HandleFunc {
 	// config := cruntime.Configs[KeyConfig].(*Config)
 	addTime := time.Duration(config.WriteDeadlineMs) * time.Millisecond
 	return func(actor ctypes.Actor, msg ctypes.Message) {
 		ctx := actor.GetContext()
-		data := msg.Payload.(ctypes.Result).Data.([]byte)
+		pkt, _ := msg.Payload.(ctypes.Result).Data.(*cprotocol.TLVPacket)
+		defer codec.Release(pkt)
+		data, err := codec.Encode(pkt)
+		defer codec.PutBuffer(data)
+
+		if err != nil {
+			clog.Error(err)
+			return
+		}
+
 		for len(data) > 0 {
 			select {
 			case <-ctx.Done():
@@ -90,6 +109,7 @@ func WriteHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 						continue
 					}
 					clog.Error("net: write failed:", err)
+					return
 				}
 				data = data[n:]
 			}
