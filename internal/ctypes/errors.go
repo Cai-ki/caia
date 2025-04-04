@@ -7,7 +7,7 @@ var (
 	ErrRequestTimeout  = errors.New("request timeout")
 	ErrNotFound        = errors.New("not found")
 	ErrKeyRepeat       = errors.New("key repeat")
-	ErrSetRepeat       = errors.New("Set repeat")
+	ErrSetRepeat       = errors.New("set repeat")
 
 	ErrActorClosed   = errors.New("actor: operation on closed actor")
 	ErrChannelFull   = errors.New("actor: channel buffer full")

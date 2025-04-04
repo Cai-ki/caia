@@ -13,7 +13,6 @@ type Manager struct {
 	methods map[string]ctypes.MethodFunc
 	handles map[string]ctypes.HandleFunc
 	pools   map[string]*sync.Pool
-	// workerPool interface{}
 }
 
 var _ ctypes.Registry = (*Manager)(nil)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/internal/ctypes"
+	"github.com/panjf2000/ants/v2"
 )
 
 const (
@@ -22,6 +23,7 @@ func WithValue(key, val interface{}) ctypes.OptionFunc {
 
 type Manager struct {
 	name     string
+	registry ctypes.Registry
 	mailbox  ctypes.Mailbox
 	ctx      context.Context
 	cancel   context.CancelFunc
@@ -45,16 +47,13 @@ func NewManager(name string, buffer int, parentCtx context.Context, handle ctype
 		children: map[string]*Manager{},
 		handle:   handle,
 	}
-
 	v := parentCtx.Value(KeyManager)
 	if v == nil {
 		m.parent = nil
 	} else {
 		m.parent = v.(*Manager)
 	}
-
 	WithValue(KeyManager, m)(m)
-
 	for _, opt := range opts {
 		opt(m)
 	}
@@ -167,13 +166,17 @@ func (r *Manager) serve() {
 		for {
 			select {
 			case msg := <-r.mailbox.Chan():
-				r.handleMessage(msg)
+				ants.Submit(func() {
+					r.handleMessage(msg)
+				})
 			case <-r.ctx.Done():
 				if r.closed.Load() { // 正常退出流程，保证子协程正常退出后父协程退出。
 					for {
 						select {
 						case msg := <-r.mailbox.Chan():
-							r.handleMessage(msg)
+							ants.Submit(func() {
+								r.handleMessage(msg)
+							})
 						default:
 							return
 						}

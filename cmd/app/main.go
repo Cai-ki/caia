@@ -5,7 +5,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/pkg/cnet"
 	_ "github.com/Cai-ki/caia/pkg/cnet"
 	"github.com/Cai-ki/caia/pkg/cruntime"
@@ -37,7 +36,6 @@ func main() {
 		select {
 		case <-t:
 			cruntime.Stop()
-			clog.Info("nihao")
 			return
 		case <-ticker.C:
 			conn.SetDeadline(time.Now().Add(1 * time.Second))
