@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/pkg/cnet"
 	_ "github.com/Cai-ki/caia/pkg/cnet"
 	"github.com/Cai-ki/caia/pkg/cruntime"
@@ -21,14 +22,13 @@ func main() {
 		fmt.Println("main: resolve tcp address err: ", err)
 		return
 	}
-
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		fmt.Println("main: dial tcp err: ", err)
 		return
 	}
 
-	t := time.After(10 * time.Second)
+	t := time.After(5 * time.Second)
 
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -37,6 +37,7 @@ func main() {
 		select {
 		case <-t:
 			cruntime.Stop()
+			clog.Info("nihao")
 			return
 		case <-ticker.C:
 			conn.SetDeadline(time.Now().Add(1 * time.Second))
