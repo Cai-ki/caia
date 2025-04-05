@@ -34,14 +34,21 @@ func ListenTCPHandle(actor ctypes.Actor, msg ctypes.Message) {
 
 	clog.Infof("net: listening on %s:%d", config.Ip, config.Port)
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 
 	addTime := time.Duration(config.ListenDeadlineMs) * time.Millisecond
 	var cid uint32 = 0
 	for {
 		select {
 		case <-ticker.C:
-			clog.Warn("NumGoroutine: ", runtime.NumGoroutine(), "NumCPU: ", runtime.NumCPU(), "ants.Cap: ", Pool.Cap(), "ants.Running: ", Pool.Running(), "son: ", len(actor.GetChildren()))
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			clog.Info(fmt.Sprintf("Alloc: %v MB, TotalAlloc: %v MB, Sys: %v MB, NumGC: %v",
+				memStats.Alloc/1024/1024,
+				memStats.TotalAlloc/1024/1024,
+				memStats.Sys/1024/1024,
+				memStats.NumGC))
+			clog.Info("NumGoroutine: ", runtime.NumGoroutine(), "NumCPU: ", runtime.NumCPU(), "ants.Cap: ", Pool.Cap(), "ants.Running: ", Pool.Running(), "son: ", len(actor.GetChildren()))
 		case <-ctx.Done():
 			return
 		default:
@@ -60,7 +67,7 @@ func ListenTCPHandle(actor ctypes.Actor, msg ctypes.Message) {
 				clog.Errorf("net: failed to create connection with %s: %v", conn.RemoteAddr().String(), err)
 			}
 
-			clog.Infof("net: established connection with %s", conn.RemoteAddr().String())
+			clog.Debugf("net: established connection with %s", conn.RemoteAddr().String())
 
 			connActor.Start()
 			connActor.SendMessage(cruntime.MsgStart)

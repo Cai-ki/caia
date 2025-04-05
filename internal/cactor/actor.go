@@ -202,7 +202,7 @@ func (m *Manager) stop() {
 	m.wg.Wait()
 	m.cleanup()
 
-	clog.Infof("actor: %s actor stop", m.name)
+	clog.Debugf("actor: %s actor stop", m.name)
 }
 
 func (m *Manager) handleMessage(msg ctypes.Message) {
