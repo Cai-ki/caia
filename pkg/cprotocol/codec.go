@@ -41,6 +41,7 @@ func NewCodec(handler CodecHandler, poolFunc func() interface{}) *Codec {
 				return make([]byte, 0, 1024)
 			},
 		},
+		buf: make([]byte, 0, 1024),
 	}
 	c.handler.SetCodec(c)
 	return c
@@ -75,7 +76,7 @@ func (c *Codec) Decode(data []byte) (interface{}, int, error) {
 
 func (c *Codec) GetBuffer() []byte {
 	buf := c.bufferPool.Get().([]byte)
-	if buf == nil || cap(buf) < 1024 {
+	if buf == nil {
 		buf = make([]byte, 0, 1024)
 	}
 	return c.bufferPool.Get().([]byte)

@@ -77,13 +77,16 @@ func ReadHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.HandleF
 						return
 					}
 					iface, _, err := codec.Decode(data[:n])
-					pkt := iface.(*cprotocol.TLVPacket)
 					if err != nil {
-						clog.Error(err)
+						// data not enough
+						continue
+					}
+					pkt, ok := iface.(*cprotocol.TLVPacket)
+					if !ok {
 						continue
 					}
 					sandbox.SendResult(pkt, nil)
-					clog.Info("read", n, "bytes data:", string(pkt.Value))
+					clog.Info("read", pkt.Length, "bytes data:", string(pkt.Value))
 				}
 			}
 		})

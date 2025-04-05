@@ -40,9 +40,9 @@ func (h *TLVHandler) Encode(v interface{}) ([]byte, error) {
 		return nil, ErrInvalidData
 	}
 
-	if len(pkt.Value) > h.MaxBodySize {
-		return nil, ErrInvalidData
-	}
+	// if len(pkt.Value) > h.MaxBodySize {
+	// 	return nil, ErrInvalidData
+	// }
 
 	buf := h.codec.GetBuffer()
 	if len(buf) < int(8+len(pkt.Value)) {
@@ -57,7 +57,6 @@ func (h *TLVHandler) Encode(v interface{}) ([]byte, error) {
 func (h *TLVHandler) Decode(data []byte) (interface{}, int, error) {
 	defer func() {
 		if err := recover(); err != nil {
-			clog.Error("?????????????????????")
 		}
 	}()
 	if len(data) < 8 {
@@ -68,9 +67,9 @@ func (h *TLVHandler) Decode(data []byte) (interface{}, int, error) {
 	pkt.Type = binary.BigEndian.Uint32(data[0:4])
 	pkt.Length = binary.BigEndian.Uint32(data[4:8])
 
-	if int(pkt.Length) > h.MaxBodySize {
-		return nil, 0, ErrInvalidData
-	}
+	// if int(pkt.Length) > h.MaxBodySize {
+	// 	return nil, 0, ErrInvalidData
+	// }
 
 	totalSize := 8 + int(pkt.Length)
 	if len(data) < totalSize {
@@ -78,5 +77,6 @@ func (h *TLVHandler) Decode(data []byte) (interface{}, int, error) {
 	}
 
 	pkt.Value = append(pkt.Value[:0], data[8:totalSize]...)
+	data = data[totalSize:]
 	return pkt, totalSize, nil
 }
