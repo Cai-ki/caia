@@ -14,7 +14,7 @@ var (
 type CodecHandler interface {
 	SetCodec(*Codec)
 	Encode(interface{}) ([]byte, error)
-	Decode([]byte) (interface{}, int, error)
+	Decode(*([]byte)) (interface{}, int, error)
 }
 
 type PooledObject interface {
@@ -41,7 +41,6 @@ func NewCodec(handler CodecHandler, poolFunc func() interface{}) *Codec {
 				return make([]byte, 0, 1024)
 			},
 		},
-		buf: make([]byte, 0, 1024),
 	}
 	c.handler.SetCodec(c)
 	return c
@@ -71,7 +70,7 @@ func (c *Codec) Decode(data []byte) (interface{}, int, error) {
 	// 使用缓冲区处理粘包
 	c.buf = append(c.buf, data...)
 
-	return c.handler.Decode(c.buf)
+	return c.handler.Decode(&c.buf)
 }
 
 func (c *Codec) GetBuffer() []byte {

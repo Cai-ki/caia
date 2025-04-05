@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/Cai-ki/caia/internal/cactor"
@@ -54,6 +55,7 @@ func ReadHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.HandleF
 		ctx := actor.GetContext()
 		writer := ctx.Value("writer").(ctypes.Actor)
 		sandbox := writer.GetMailbox()
+
 		Pool.Submit(func() {
 			defer actor.GetParent().StopWithErase()
 			defer conn.Close()
@@ -76,12 +78,12 @@ func ReadHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.HandleF
 						//actor.GetParent().Stop()
 						return
 					}
-					iface, _, err := codec.Decode(data[:n])
+					iface, sz, err := codec.Decode(data[:n])
 					if err != nil {
 						// data not enough
 						continue
 					}
-					pkt, ok := iface.(*cprotocol.TLVPacket)
+					_, ok := iface.(*cprotocol.TLVPacket)
 					if !ok {
 						continue
 					}
@@ -90,7 +92,7 @@ func ReadHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.HandleF
 						Length: uint32(len([]byte("hello, world!"))),
 						Value:  []byte("hello, world!"),
 					}, nil)
-					clog.Info("read", pkt.Length, "bytes data") //, string(pkt.Value))
+					clog.Debug("read", sz, "bytes data") //, string(pkt.Value))
 				}
 			}
 		})
@@ -104,36 +106,29 @@ func WriteHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.Handle
 		//ctx := actor.GetContext()
 		pkt, _ := msg.Payload.(ctypes.Result).Data.(*cprotocol.TLVPacket)
 		data, err := codec.Encode(pkt)
+		codec.Release(pkt)
 		if err != nil {
 			clog.Error(err)
 			return
 		}
-		Pool.Submit(func() {
-			defer codec.Release(pkt)
-			defer codec.PutBuffer(data)
+		defer codec.PutBuffer(data)
 
-			for len(data) > 0 {
-				//conn.SetWriteDeadline(time.Now().Add(addTime))
-				n, err := conn.Write(data)
-				if err != nil {
-					if os.IsTimeout(err) {
-						data = data[n:]
-						continue
-					} else if err == io.ErrClosedPipe || err == io.EOF {
-						clog.Debug("net: write close:", err)
-					} else {
-						clog.Error(err, "data:", (data))
-					}
-					return
+		for len(data) > 0 {
+			//conn.SetWriteDeadline(time.Now().Add(addTime))
+			n, err := conn.Write(data)
+			data = data[n:]
+			if err != nil {
+				if os.IsTimeout(err) {
+					// data = data[n:]
+					continue
+				} else if err == io.ErrClosedPipe || err == io.EOF {
+					clog.Debug("net: write close:", err)
+				} else if errors.Is(err, syscall.EPIPE) {
+					clog.Error(err, "data:", (data), n)
+					// actor.Stop()
 				}
-				data = data[n:]
-				// select {
-				// case <-ctx.Done():
-				// 	return
-				// default:
-
-				// }
+				return
 			}
-		})
+		}
 	}
 }
