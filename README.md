@@ -1,4 +1,4 @@
-# Caia - 基于Actor模型的Go语言高并发TCP框架
+# Caia - 基于Actor模型的Go语言高并发TCP服务器框架
 
 [![Go Version](https://img.shields.io/badge/go-1.23+-blue.svg)](https://golang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
