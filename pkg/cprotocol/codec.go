@@ -74,12 +74,14 @@ func (c *Codec) Decode(data []byte) (interface{}, int, error) {
 }
 
 func (c *Codec) GetBuffer() []byte {
+	buf := c.bufferPool.Get().([]byte)
+	if buf == nil || cap(buf) < 1024 {
+		buf = make([]byte, 0, 1024)
+	}
 	return c.bufferPool.Get().([]byte)
 }
 
 func (c *Codec) PutBuffer(b []byte) {
-	if len(b) > 1024 {
-		b = b[:1024]
-	}
+	b = b[:0]
 	c.bufferPool.Put(b)
 }

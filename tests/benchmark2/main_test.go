@@ -10,10 +10,10 @@ import (
 )
 
 func BenchmarkConcurrentConnections(b *testing.B) {
-	const (
-		targetAddr  = "localhost:9000" // 被测服务地址
-		concurrency = 5000             // 并发连接数
-		message     = "hello, world!"  // 测试消息内容
+	var (
+		targetAddr  = "localhost:9000"     // 被测服务地址
+		concurrency = 10000                // 并发连接数
+		message     = make([]byte, 1024-8) //"hello, world!"  // 测试消息内容
 	)
 
 	// 预编码测试消息（所有连接共用）

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -11,7 +12,10 @@ import (
 	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/internal/ctypes"
 	"github.com/Cai-ki/caia/pkg/cruntime"
+	"github.com/panjf2000/ants/v2"
 )
+
+var Pool, err = ants.NewPool(100000)
 
 func ListenTCPHandle(actor ctypes.Actor, msg ctypes.Message) {
 	// config := cruntime.Configs[KeyConfig].(*Config)
@@ -30,10 +34,14 @@ func ListenTCPHandle(actor ctypes.Actor, msg ctypes.Message) {
 
 	clog.Infof("net: listening on %s:%d", config.Ip, config.Port)
 
+	ticker := time.NewTicker(1 * time.Second)
+
 	addTime := time.Duration(config.ListenDeadlineMs) * time.Millisecond
 	var cid uint32 = 0
 	for {
 		select {
+		case <-ticker.C:
+			clog.Warn("NumGoroutine: ", runtime.NumGoroutine(), "NumCPU: ", runtime.NumCPU(), "ants.Cap: ", Pool.Cap(), "ants.Running: ", Pool.Running(), "son: ", len(actor.GetChildren()))
 		case <-ctx.Done():
 			return
 		default:

@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	clog.SetLevel(clog.FATAL)
+	clog.SetLevel(clog.WARN)
 	cruntime.Start()
 	<-cruntime.RootActor.GetContext().Done()
 }

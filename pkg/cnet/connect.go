@@ -1,6 +1,8 @@
 package cnet
 
 import (
+	"errors"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -14,11 +16,10 @@ import (
 )
 
 func ConnectHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
-
 	return func(actor ctypes.Actor, msg ctypes.Message) {
 		// config := cruntime.Configs[KeyConfig].(*Config)
 		ctx := actor.GetContext()
-		defer conn.Close()
+		// defer conn.Close()
 
 		codec := cprotocol.NewCodec(&cprotocol.TLVHandler{}, func() interface{} {
 			return &cprotocol.TLVPacket{Value: make([]byte, 0, 128)}
@@ -42,7 +43,7 @@ func ConnectHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 		reader.Start()
 		reader.SendMessage(cruntime.MsgStart)
 
-		<-ctx.Done() //TODO connect actor 除了启动子actor外，还有负责各种msg的处理
+		// <-ctx.Done() //TODO connect actor 除了启动子actor外，还有负责各种msg的处理
 	}
 }
 
@@ -53,31 +54,39 @@ func ReadHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.HandleF
 		ctx := actor.GetContext()
 		writer := ctx.Value("writer").(ctypes.Actor)
 		sandbox := writer.GetMailbox()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				conn.SetReadDeadline(time.Now().Add(addTime))
-				data := make([]byte, 1024)
-				n, err := conn.Read(data)
-				if err != nil {
-					if os.IsTimeout(err) {
+		Pool.Submit(func() {
+			defer actor.GetParent().StopWithErase()
+			defer conn.Close()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					conn.SetReadDeadline(time.Now().Add(addTime))
+					data := make([]byte, 1024)
+					n, err := conn.Read(data)
+					if err != nil {
+						if os.IsTimeout(err) {
+							continue
+						} else if errors.Is(err, io.EOF) {
+							clog.Infof("net: %s connect closed", conn.RemoteAddr())
+						} else {
+							clog.Error("net: read error:", err)
+						}
+						//actor.GetParent().Stop()
+						return
+					}
+					iface, _, err := codec.Decode(data[:n])
+					pkt := iface.(*cprotocol.TLVPacket)
+					if err != nil {
+						clog.Error(err)
 						continue
 					}
-					clog.Error("net: read error:", err)
-					return
+					sandbox.SendResult(pkt, nil)
+					clog.Info("read", n, "bytes data:", string(pkt.Value))
 				}
-				iface, _, err := codec.Decode(data[:n])
-				pkt := iface.(*cprotocol.TLVPacket)
-				if err != nil {
-					clog.Error(err)
-					continue
-				}
-				sandbox.SendResult(pkt, nil)
-				clog.Info("read", n, "bytes data:", string(pkt.Value))
 			}
-		}
+		})
 	}
 }
 
@@ -87,32 +96,37 @@ func WriteHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.Handle
 	return func(actor ctypes.Actor, msg ctypes.Message) {
 		ctx := actor.GetContext()
 		pkt, _ := msg.Payload.(ctypes.Result).Data.(*cprotocol.TLVPacket)
-		defer codec.Release(pkt)
 		data, err := codec.Encode(pkt)
-		defer codec.PutBuffer(data)
-
 		if err != nil {
 			clog.Error(err)
 			return
 		}
+		Pool.Submit(func() {
+			defer codec.Release(pkt)
+			defer codec.PutBuffer(data)
 
-		for len(data) > 0 {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				conn.SetWriteDeadline(time.Now().Add(addTime))
-				n, err := conn.Write(data)
-				if err != nil {
-					if os.IsTimeout(err) {
-						data = data[n:]
-						continue
-					}
-					clog.Error("net: write failed:", err)
+			for len(data) > 0 {
+				select {
+				case <-ctx.Done():
 					return
+				default:
+					conn.SetWriteDeadline(time.Now().Add(addTime))
+					n, err := conn.Write(data)
+					if err != nil {
+						if os.IsTimeout(err) {
+							data = data[n:]
+							continue
+						} else if err == io.ErrClosedPipe || err == io.EOF {
+							clog.Warn("net: write close:", err)
+						} else {
+							clog.Error("net: write failed:", err)
+						}
+						//actor.GetParent().Stop()
+						return
+					}
+					data = data[n:]
 				}
-				data = data[n:]
 			}
-		}
+		})
 	}
 }

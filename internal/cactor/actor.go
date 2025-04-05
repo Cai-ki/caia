@@ -7,7 +7,6 @@ import (
 
 	"github.com/Cai-ki/caia/internal/clog"
 	"github.com/Cai-ki/caia/internal/ctypes"
-	"github.com/panjf2000/ants/v2"
 )
 
 func WithValue(key, val interface{}) ctypes.OptionFunc {
@@ -24,7 +23,7 @@ type Manager struct {
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
 	parent   ctypes.Actor
-	children map[string]*Manager
+	children map[string]ctypes.Actor
 	mu       sync.Mutex
 	closed   atomic.Bool
 	handle   ctypes.HandleFunc
@@ -43,7 +42,7 @@ func NewManager(name string, buffer int, parent ctypes.Actor, handle ctypes.Hand
 		ctx:      ctx,
 		cancel:   cancel,
 		parent:   parent,
-		children: map[string]*Manager{},
+		children: map[string]ctypes.Actor{},
 		handle:   handle,
 	}
 
@@ -91,6 +90,14 @@ func (m *Manager) GetContext() context.Context {
 	return m.ctx
 }
 
+func (m *Manager) GetParent() ctypes.Actor {
+	return m.parent
+}
+
+func (m *Manager) GetChildren() map[string]ctypes.Actor {
+	return m.children
+}
+
 func (m *Manager) Start() {
 	m.wg.Add(1)
 	m.serve() //TODO 这里可能有协程启动时不符合预期父协程先，子协程后的顺序。建议之后压测一下。
@@ -101,6 +108,10 @@ func (m *Manager) Start() {
 }
 
 func (m *Manager) Stop() {
+	m.stop()
+}
+
+func (m *Manager) StopWithErase() {
 	m.stop()
 	if m.parent != nil {
 		err := m.parent.DeleteChild(m.name)
@@ -154,17 +165,13 @@ func (m *Manager) serve() {
 		for {
 			select {
 			case msg := <-m.mailbox.Chan():
-				ants.Submit(func() {
-					m.handleMessage(msg)
-				})
+				m.handleMessage(msg)
 			case <-m.ctx.Done():
 				if m.closed.Load() { // 正常退出流程，保证子协程正常退出后父协程退出。
 					for {
 						select {
 						case msg := <-m.mailbox.Chan():
-							ants.Submit(func() {
-								m.handleMessage(msg)
-							})
+							m.handleMessage(msg)
 						default:
 							return
 						}
@@ -188,7 +195,7 @@ func (m *Manager) stop() {
 	m.closed.Store(true)
 
 	for _, child := range m.children {
-		child.stop()
+		child.Stop()
 	}
 
 	m.cancel()

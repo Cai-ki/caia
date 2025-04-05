@@ -10,8 +10,11 @@ type Actor interface {
 	GetName() string
 	GetMailbox() Mailbox
 	GetContext() context.Context
+	GetParent() Actor
+	GetChildren() map[string]Actor
 	Start()
 	Stop()
+	StopWithErase()
 	SendMessage(msg Message) error
 	SendMessageAsync(msg Message) error
 	SendMessageToChildren(msg Message)
