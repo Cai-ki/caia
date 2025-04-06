@@ -46,7 +46,7 @@ func ListenTCPHandle(actor ctypes.Actor, msg ctypes.Message) {
 				memStats.TotalAlloc/1024/1024,
 				memStats.Sys/1024/1024,
 				memStats.NumGC))
-			clog.Info("NumGoroutine: ", runtime.NumGoroutine(), "NumCPU: ", runtime.NumCPU(), "ants.Cap: ", ants.Cap(), "ants.Running: ", ants.Running(), "son: ", len(actor.GetChildren()))
+			clog.Info("NumGoroutine: ", runtime.NumGoroutine(), "NumCPU: ", runtime.NumCPU(), "ants.Running: ", ants.Running())
 		case <-ctx.Done():
 			return
 		default:
