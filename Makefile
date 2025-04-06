@@ -30,3 +30,8 @@ id = 1
 
 bench:
 	go test -v -bench=. ./tests/benchmark${id}/... -benchtime=${benchtime}
+
+fetch-force:
+	git fetch origin
+	git reset --hard origin/main
+	git clean -fd
