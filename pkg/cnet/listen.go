@@ -15,8 +15,6 @@ import (
 	"github.com/panjf2000/ants/v2"
 )
 
-var Pool, err = ants.NewPool(100000)
-
 func ListenTCPHandle(actor ctypes.Actor, msg ctypes.Message) {
 	// config := cruntime.Configs[KeyConfig].(*Config)
 	ctx := actor.GetContext()
@@ -48,7 +46,7 @@ func ListenTCPHandle(actor ctypes.Actor, msg ctypes.Message) {
 				memStats.TotalAlloc/1024/1024,
 				memStats.Sys/1024/1024,
 				memStats.NumGC))
-			clog.Info("NumGoroutine: ", runtime.NumGoroutine(), "NumCPU: ", runtime.NumCPU(), "ants.Cap: ", Pool.Cap(), "ants.Running: ", Pool.Running(), "son: ", len(actor.GetChildren()))
+			clog.Info("NumGoroutine: ", runtime.NumGoroutine(), "NumCPU: ", runtime.NumCPU(), "ants.Cap: ", ants.Cap(), "ants.Running: ", ants.Running(), "son: ", len(actor.GetChildren()))
 		case <-ctx.Done():
 			return
 		default:

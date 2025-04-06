@@ -14,13 +14,13 @@ import (
 	"github.com/Cai-ki/caia/internal/ctypes"
 	"github.com/Cai-ki/caia/pkg/cprotocol"
 	"github.com/Cai-ki/caia/pkg/cruntime"
+	"github.com/panjf2000/ants/v2"
 )
 
 func ConnectHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 	return func(actor ctypes.Actor, msg ctypes.Message) {
 		// config := cruntime.Configs[KeyConfig].(*Config)
 		ctx := actor.GetContext()
-		// defer conn.Close()
 
 		codec := cprotocol.NewCodec(&cprotocol.TLVHandler{}, func() interface{} {
 			return &cprotocol.TLVPacket{Value: make([]byte, 0, 128)}
@@ -43,8 +43,6 @@ func ConnectHandleFactory(conn *net.TCPConn) ctypes.HandleFunc {
 		}
 		reader.Start()
 		reader.SendMessage(cruntime.MsgStart)
-
-		// <-ctx.Done() //TODO connect actor 除了启动子actor外，还有负责各种msg的处理
 	}
 }
 
@@ -56,7 +54,7 @@ func ReadHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.HandleF
 		writer := ctx.Value("writer").(ctypes.Actor)
 		sandbox := writer.GetMailbox()
 
-		Pool.Submit(func() {
+		ants.Submit(func() {
 			defer actor.GetParent().StopWithErase()
 			defer conn.Close()
 			for {
@@ -75,7 +73,6 @@ func ReadHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.HandleF
 						} else {
 							clog.Error("net: read error:", err)
 						}
-						//actor.GetParent().Stop()
 						return
 					}
 					iface, sz, err := codec.Decode(data[:n])
@@ -119,13 +116,12 @@ func WriteHandleFactory(conn *net.TCPConn, codec *cprotocol.Codec) ctypes.Handle
 			data = data[n:]
 			if err != nil {
 				if os.IsTimeout(err) {
-					// data = data[n:]
 					continue
 				} else if err == io.ErrClosedPipe || err == io.EOF {
 					clog.Debug("net: write close:", err)
 				} else if errors.Is(err, syscall.EPIPE) {
 					clog.Error(err, "data:", (data), n)
-					// actor.Stop()
+					actor.Stop()
 				}
 				return
 			}

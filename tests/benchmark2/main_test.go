@@ -11,19 +11,19 @@ import (
 
 func BenchmarkConcurrentConnections(b *testing.B) {
 	var (
-		targetAddr  = "localhost:9000" // 被测服务地址
-		concurrency = 100              // 并发询问数
-		message     = "hello, world!"  // 测试消息内容
+		targetAddr  = "localhost:9000"    // 被测服务地址
+		concurrency = 10000               // 并发连接数
+		message     = make([]byte, 256-8) //"hello, world!"  // 测试消息内容
 	)
 	//TODO 超过1024字节数据会有问题
 
 	var wg sync.WaitGroup
-	wg.Add(b.N)
+	wg.Add(concurrency)
 
 	b.ResetTimer() // 开始计时
 
 	// 每个goroutine代表一个独立连接
-	for ii := 0; ii < b.N; ii++ {
+	for ii := 0; ii < concurrency; ii++ {
 		go func() {
 			defer wg.Done()
 			coder := cprotocol.NewCodec(
@@ -40,7 +40,7 @@ func BenchmarkConcurrentConnections(b *testing.B) {
 				b.Error("编码失败:", err)
 			}
 			// 建立独立连接
-			conn, err := net.DialTimeout("tcp", targetAddr, 2*time.Second)
+			conn, err := net.DialTimeout("tcp", targetAddr, 10*time.Second)
 			if err != nil {
 				b.Error("连接失败:", err)
 				return
