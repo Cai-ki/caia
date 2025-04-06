@@ -11,9 +11,9 @@ import (
 
 func BenchmarkConcurrentConnections(b *testing.B) {
 	var (
-		targetAddr  = "localhost:9000"    // 被测服务地址
-		concurrency = 10000               // 并发连接数
-		message     = make([]byte, 256-8) //"hello, world!"  // 测试消息内容
+		targetAddr  = "localhost:9000" // 被测服务地址
+		concurrency = 10000            // 并发连接数
+		message     = "hello, world!"  //"hello, world!"  // 测试消息内容
 	)
 	//TODO 超过1024字节数据会有问题
 

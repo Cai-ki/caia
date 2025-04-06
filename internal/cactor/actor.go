@@ -16,10 +16,18 @@ func WithValue(key, val interface{}) ctypes.OptionFunc {
 	}
 }
 
+func Registry(registry ctypes.Registry) ctypes.OptionFunc {
+	return func(i interface{}) {
+		m := i.(*Manager)
+		m.registry = registry
+	}
+}
+
 type Manager struct {
 	name     string
 	mailbox  ctypes.Mailbox
 	ctx      context.Context
+	registry ctypes.Registry
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
 	parent   ctypes.Actor
@@ -96,6 +104,13 @@ func (m *Manager) GetParent() ctypes.Actor {
 
 func (m *Manager) GetChildren() map[string]ctypes.Actor {
 	return m.children
+}
+
+func (m *Manager) GetRegistry() (ctypes.Registry, error) {
+	if m.registry == nil {
+		return nil, ctypes.ErrNotFound
+	}
+	return m.registry, nil
 }
 
 func (m *Manager) Start() {

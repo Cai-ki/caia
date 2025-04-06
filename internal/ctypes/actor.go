@@ -12,6 +12,7 @@ type Actor interface {
 	GetContext() context.Context
 	GetParent() Actor
 	GetChildren() map[string]Actor
+	GetRegistry() (Registry, error)
 	Start()
 	Stop()
 	StopWithErase()
