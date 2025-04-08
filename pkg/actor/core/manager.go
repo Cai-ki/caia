@@ -5,8 +5,8 @@ import (
 )
 
 type Manager interface {
-	RegisterActor(ctx Context, id uint32, actor Actor, parent Ref) Ref
-	runActor(ctx Context, actor Actor, ref Ref)
+	RegisterActor(ctx Context, id uint32, actor Actor)
+	runActor(ctx Context, actor Actor)
 }
 
 type BaseManager struct {
@@ -22,28 +22,31 @@ func NewBaseManager() *BaseManager {
 	}
 }
 
-func (m *BaseManager) RegisterActor(ctx Context, id uint32, actor Actor, parent Ref) Ref {
-	actorRef := ctx.Self()
-
+func (m *BaseManager) RegisterActor(ctx Context, id uint32, actor Actor) {
 	m.mu.Lock()
-	m.actors[id] = actorRef
+	m.actors[id] = ctx.Self()
 	m.mu.Unlock()
 
-	go m.runActor(ctx, actor, actorRef)
-	return actorRef
+	go m.runActor(ctx, actor)
 }
 
-func (m *BaseManager) runActor(ctx Context, actor Actor, ref Ref) {
-
+func (m *BaseManager) runActor(ctx Context, actor Actor) {
 	actor.PreStart(ctx)
-	for msg := range ref.Mailbox() {
-		if env, ok := msg.(Envelope); ok {
-			ctx.(*BaseContext).sender = env.Sender
-			actor.Receive(ctx, env.Msg)
-		} else {
-			ctx.(*BaseContext).sender = nil
-			actor.Receive(ctx, msg)
+	defer actor.PostStop(ctx)
+
+	mailbox := actor.Mailbox()
+	for {
+		select {
+		case msg := <-mailbox:
+			if env, ok := msg.(Envelope); ok {
+				ctx.SetSender(env.Sender)
+				actor.Receive(ctx, env.Msg)
+			} else {
+				ctx.SetSender(nil)
+				actor.Receive(ctx, msg)
+			}
+		case <-ctx.(*BaseContext).Done():
+			return
 		}
 	}
-	actor.PostStop(ctx)
 }

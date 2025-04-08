@@ -1,6 +1,7 @@
 package actor
 
 type Ref interface {
+	Init()
 	Id() uint32
 	Mailbox() chan interface{}
 	Parent() Ref
@@ -14,6 +15,12 @@ type BaseRef struct {
 }
 
 var _ Ref = (*BaseRef)(nil)
+
+func NewBaseRef(id uint32, mailbox chan interface{}, parent Ref) *BaseRef {
+	return &BaseRef{id: id, mailbox: mailbox, parent: parent}
+}
+
+func (br *BaseRef) Init() {}
 
 func (br *BaseRef) Id() uint32 {
 	return br.id
